@@ -7,24 +7,47 @@ using UnityEngine.Assertions;
 
 public class ModelSwapper : MonoBehaviour
 {
-    public int index = 0;
     public Transform[] models = new Transform[0];
     public Transform currentModel;
 
-    public void OnValidate()
+/*
+    [Serializable]
+    private class ModelReference
     {
-        if (models.Length == 0)
+        [Serializable]
+        public class BoneSet
         {
-            return;
+            private SkinnedMeshRenderer _skin;
+            private Transform[] _bones;
+
+            public BoneSet(SkinnedMeshRenderer smr)
+            {
+                _skin = smr;
+            }
+
+            internal void OnValidate(Transform boneRoot)
+            {
+            }
+
+            public void Apply()
+            {
+                _skin.bones = _bones;
+            }
         }
-        index = Math.Abs(index) % models.Length;
-        Transform model = models[index];
-        if (model != currentModel)
+
+        public Transform model;
+        public BoneSet[] bones;
+
+        public void OnValidate(ModelSwapper transform)
         {
-            Swap(model);
+            bones = model.GetComponentsInChildren<SkinnedMeshRenderer>().Select(s => new BoneSet(s)).ToArray();
+
+            foreach(BoneSet set in bones)
+            {
+            }
         }
     }
-
+*/
     public void Swap(Transform model)
     {
         currentModel = model;
@@ -116,7 +139,7 @@ public class ModelSwapper : MonoBehaviour
         local.sharedMesh = model.sharedMesh;
         local.sharedMaterials = model.sharedMaterials;
 
-        //TODO: bones
+        new BoneTracker(model).Match(local);
     }
 
     private void MatchComponent(MeshRenderer local, MeshRenderer model)
@@ -146,7 +169,10 @@ public class ModelSwapper : MonoBehaviour
             return;
         }
 
-        local.avatar = model.avatar;
-        local.runtimeAnimatorController = model.runtimeAnimatorController;
+        if (model.runtimeAnimatorController)
+        {
+            local.avatar = model.avatar;
+            local.runtimeAnimatorController = model.runtimeAnimatorController;
+        }
     }
 }
