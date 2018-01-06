@@ -5,7 +5,6 @@ using UnityEngine;
 
 public class BoneTracker
 {
-
     private class TrackedBone
     {
         readonly List<string> _path = new List<string>();
@@ -38,9 +37,8 @@ public class BoneTracker
         bones = smr.bones.Select(b => new TrackedBone(smr.rootBone, b)).ToList();
     }
 
-    internal void Match(SkinnedMeshRenderer local)
+    internal Transform[] Match(Transform root)
     {
-        Transform root = local.rootBone;
-        local.bones = bones.Select(b => b.FindMatch(root)).ToArray();
+        return bones.Select(b => b.FindMatch(root)).ToArray();
     }
 }

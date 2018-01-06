@@ -139,7 +139,7 @@ public class ModelSwapper : MonoBehaviour
         local.sharedMesh = model.sharedMesh;
         local.sharedMaterials = model.sharedMaterials;
 
-        new BoneTracker(model).Match(local);
+        local.bones = new BoneTracker(model).Match(local.rootBone);
     }
 
     private void MatchComponent(MeshRenderer local, MeshRenderer model)
