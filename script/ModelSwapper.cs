@@ -10,7 +10,7 @@ public class ModelSwapper : MonoBehaviour
     public Transform[] models = new Transform[0];
     public Transform currentModel;
 
-/*
+    /*
     [Serializable]
     private class ModelReference
     {
@@ -42,12 +42,13 @@ public class ModelSwapper : MonoBehaviour
         {
             bones = model.GetComponentsInChildren<SkinnedMeshRenderer>().Select(s => new BoneSet(s)).ToArray();
 
-            foreach(BoneSet set in bones)
+            foreach (BoneSet set in bones)
             {
             }
         }
     }
-*/
+    */
+
     public void Swap(Transform model)
     {
         currentModel = model;
