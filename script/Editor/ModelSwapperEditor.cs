@@ -1,19 +1,39 @@
-﻿using UnityEditor;
+﻿using System.Linq;
+using UnityEditor;
 using UnityEngine;
 
+[CanEditMultipleObjects]
 [CustomEditor(typeof(ModelSwapper))]
-public class ModelSwapperEditor : Editor {
-    
+public class ModelSwapperEditor : Editor
+{
+    private SerializedProperty _models;
+
+    void OnEnable()
+    {
+    }
+
     public override void OnInspectorGUI()
     {
-        var tgt = target as ModelSwapper;
+        _models = serializedObject.FindProperty("models");
 
-        foreach(var t in tgt.models)
+        var tgts = targets.Cast<ModelSwapper>().ToArray();
+        var distinctModels = tgts.SelectMany(t => t.models.Distinct()).GroupBy(t => t);
+
+        foreach (var group in distinctModels)
         {
-            if (GUILayout.Button("Activate " + t.name))
+            var model = group.Key;
+            if (GUILayout.Button("Activate " + model.name + " (" + group.Count() + ")"))
             {
-                tgt.Swap(t);
+                foreach (var tgt in tgts.Where(t => t.models.Contains(model)))
+                {
+                    tgt.Swap(model);
+                }
             }
         }
+
+        serializedObject.Update();
+        _models.isExpanded = true;
+        EditorGUILayout.PropertyField(_models, true);
+        serializedObject.ApplyModifiedProperties();
     }
 }
