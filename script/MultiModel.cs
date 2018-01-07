@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using UnityEngine;
 
 namespace ModelSwap
@@ -9,22 +7,35 @@ namespace ModelSwap
     {
         public Transform[] models = new Transform[0];
         [SerializeField]
-        private ModelReference[] _models = new ModelReference[0];
+        private ModelReference[] _modelReference = new ModelReference[0];
         public Transform currentModel;
-        private ModelReference _currentReference;
         [SerializeField]
         private bool _bakeBones;
 
         public void OnValidate()
         {
-            _models = models.Where(m => m != null).Select(m => new ModelReference(transform, m, _bakeBones)).ToArray();
+            _modelReference = models.Where(m => m != null).Select(GetReferenceOrNew).ToArray();
         }
 
-        public void Swap(Transform model)
+        private ModelReference GetReferenceOrNew(Transform model)
         {
-            var swapper = new ModelSwapper(_models.FirstOrDefault(m => m.Model == model));
+            ModelReference reference = _modelReference.FirstOrDefault(m => m.Model == model);
+            return reference ?? new ModelReference(transform, model, _bakeBones);
+        }
+
+        public bool Swap(Transform model)
+        {
+            ModelReference reference = _modelReference.FirstOrDefault(m => m.Model == model);
+            if (reference == null)
+            {
+                return false;
+            }
+
+            ModelSwapper swapper = new ModelSwapper(reference);
             swapper.Match(transform, model);
             currentModel = model;
+
+            return true;
         }
     }
 }
