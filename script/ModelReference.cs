@@ -50,7 +50,7 @@ public class ModelReference
             where localTransform
             let localSmr = localTransform.GetComponent<SkinnedMeshRenderer>()
             where localSmr
-            select new BoneSet(modelSmr, tracker.Match(localSmr.rootBone))
+            select new BoneSet(modelSmr, tracker.Match(localSmr))
             ).ToArray();
     }
 

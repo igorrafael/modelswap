@@ -15,8 +15,9 @@ public class BoneTracker
         _bones = skinnedMeshRenderer.bones.Select(b => new TransformMatcher(root, b)).ToList();
     }
 
-    internal Transform[] Match(Transform root)
+    internal Transform[] Match(SkinnedMeshRenderer skinnedMeshRenderer)
     {
+        Transform root = skinnedMeshRenderer.rootBone;
         return _bones.Select(b => b.FindMatch(root)).ToArray();
     }
 }
