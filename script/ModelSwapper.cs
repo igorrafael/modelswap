@@ -3,156 +3,159 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class ModelSwapper
+namespace ModelSwap
 {
-    private readonly ModelReference _reference;
-
-    public ModelSwapper(ModelReference reference)
+    public class ModelSwapper
     {
-        _reference = reference;
-    }
+        private readonly ModelReference _reference;
 
-    public void Match(Transform local, Transform model)
-    {
-        Component[] components = model.GetComponents<Component>();
-
-        if (components.Any(c => c is MultiModel))
+        public ModelSwapper(ModelReference reference)
         {
-            return;
+            _reference = reference;
         }
 
-        local.gameObject.SetActive(model.gameObject.activeSelf);
-
-        foreach (Component modelComponent in components)
+        public void Match(Transform local, Transform model)
         {
-            if (modelComponent is Transform)
+            Component[] components = model.GetComponents<Component>();
+
+            if (components.Any(c => c is MultiModel))
             {
-                continue;
+                return;
             }
 
-            Type type = modelComponent.GetType();
-            Component localComponent = local.GetComponent(type) ?? local.gameObject.AddComponent(type);
+            local.gameObject.SetActive(model.gameObject.activeSelf);
+
+            foreach (Component modelComponent in components)
+            {
+                if (modelComponent is Transform)
+                {
+                    continue;
+                }
+
+                Type type = modelComponent.GetType();
+                Component localComponent = local.GetComponent(type) ?? local.gameObject.AddComponent(type);
 
 #if UNITY_EDITOR
-            if (local.GetComponents(type).Length > 1)
+                if (local.GetComponents(type).Length > 1)
+                {
+                    throw new Exception();
+                }
+#endif
+
+                Match(localComponent, modelComponent);
+            }
+
+            Dictionary<string, Transform> childDictionary = CreateChildDictionary(local);
+
+            foreach (Transform modelChild in model)
+            {
+                Transform localChild;
+                string name = modelChild.name;
+                if (childDictionary.ContainsKey(name))
+                {
+                    localChild = childDictionary[name];
+                }
+                else
+                {
+                    //TODO treat this better
+                    localChild = new GameObject(name).transform;
+                    localChild.SetParent(local);
+                }
+
+                childDictionary.Remove(name);
+
+                localChild.localPosition = modelChild.localPosition;
+                localChild.localRotation = modelChild.localRotation;
+                localChild.localScale = modelChild.localScale;
+
+                Match(localChild, modelChild);
+            }
+
+            foreach (Transform unvisited in childDictionary.Values)
+            {
+                //IDEA: check if this was in the _currentModel
+                if (unvisited.GetComponent<SkinnedMeshRenderer>() != null)
+                {
+                    unvisited.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        //IDEA: bake this dictionary for runtime use
+        private static Dictionary<string, Transform> CreateChildDictionary(Transform model)
+        {
+#if UNITY_EDITOR
+            var childGroups = model.Cast<Transform>().GroupBy(t => t.name);
+            if (childGroups.Any(g => g.Count() > 1))
             {
                 throw new Exception();
             }
 #endif
 
-            Match(localComponent, modelComponent);
+            return model.Cast<Transform>().ToDictionary(c => c.name);
         }
 
-        Dictionary<string, Transform> childDictionary = CreateChildDictionary(local);
-
-        foreach (Transform modelChild in model)
+        private void Match(Component localComponent, Component modelComponent)
         {
-            Transform localChild;
-            string name = modelChild.name;
-            if (childDictionary.ContainsKey(name))
+            SkinnedMeshRenderer skinned = modelComponent as SkinnedMeshRenderer;
+            if (skinned)
             {
-                localChild = childDictionary[name];
+                MatchComponent(localComponent as SkinnedMeshRenderer, skinned);
             }
             else
             {
-                //TODO treat this better
-                localChild = new GameObject(name).transform;
-                localChild.SetParent(local);
+                MatchComponent(localComponent as MeshRenderer, modelComponent as MeshRenderer);
+                MatchComponent(localComponent as MeshFilter, modelComponent as MeshFilter);
             }
 
-            childDictionary.Remove(name);
-
-            localChild.localPosition = modelChild.localPosition;
-            localChild.localRotation = modelChild.localRotation;
-            localChild.localScale = modelChild.localScale;
-
-            Match(localChild, modelChild);
+            MatchComponent(localComponent as Animator, modelComponent as Animator);
         }
 
-        foreach (Transform unvisited in childDictionary.Values)
+        private void MatchComponent(SkinnedMeshRenderer local, SkinnedMeshRenderer model)
         {
-            //IDEA: check if this was in the _currentModel
-            if (unvisited.GetComponent<SkinnedMeshRenderer>() != null)
+            if (local == null || model == null)
             {
-                unvisited.gameObject.SetActive(false);
+                return;
             }
-        }
-    }
 
-    //IDEA: bake this dictionary for runtime use
-    private static Dictionary<string, Transform> CreateChildDictionary(Transform model)
-    {
-#if UNITY_EDITOR
-        var childGroups = model.Cast<Transform>().GroupBy(t => t.name);
-        if (childGroups.Any(g => g.Count() > 1))
-        {
-            throw new Exception();
-        }
-#endif
+            local.sharedMesh = model.sharedMesh;
+            local.sharedMaterials = model.sharedMaterials;
 
-        return model.Cast<Transform>().ToDictionary(c => c.name);
-    }
-
-    private void Match(Component localComponent, Component modelComponent)
-    {
-        SkinnedMeshRenderer skinned = modelComponent as SkinnedMeshRenderer;
-        if (skinned)
-        {
-            MatchComponent(localComponent as SkinnedMeshRenderer, skinned);
-        }
-        else
-        {
-            MatchComponent(localComponent as MeshRenderer, modelComponent as MeshRenderer);
-            MatchComponent(localComponent as MeshFilter, modelComponent as MeshFilter);
+            local.bones = _reference.GetBones(local, model);
         }
 
-        MatchComponent(localComponent as Animator, modelComponent as Animator);
-    }
-
-    private void MatchComponent(SkinnedMeshRenderer local, SkinnedMeshRenderer model)
-    {
-        if (local == null || model == null)
+        private void MatchComponent(MeshRenderer local, MeshRenderer model)
         {
-            return;
+            if (local == null || model == null)
+            {
+                return;
+            }
+
+            local.sharedMaterials = model.sharedMaterials;
         }
 
-        local.sharedMesh = model.sharedMesh;
-        local.sharedMaterials = model.sharedMaterials;
-
-        local.bones = _reference.GetBones(local, model);
-    }
-
-    private void MatchComponent(MeshRenderer local, MeshRenderer model)
-    {
-        if (local == null || model == null)
+        private void MatchComponent(MeshFilter local, MeshFilter model)
         {
-            return;
+            if (local == null || model == null)
+            {
+                return;
+            }
+
+            local.sharedMesh = model.sharedMesh;
         }
 
-        local.sharedMaterials = model.sharedMaterials;
-    }
-
-    private void MatchComponent(MeshFilter local, MeshFilter model)
-    {
-        if (local == null || model == null)
+        private void MatchComponent(Animator local, Animator model)
         {
-            return;
-        }
+            if (local == null || model == null)
+            {
+                return;
+            }
 
-        local.sharedMesh = model.sharedMesh;
-    }
-
-    private void MatchComponent(Animator local, Animator model)
-    {
-        if (local == null || model == null)
-        {
-            return;
-        }
-
-        if (model.runtimeAnimatorController)
-        {
-            local.avatar = model.avatar;
-            local.runtimeAnimatorController = model.runtimeAnimatorController;
+            if (model.runtimeAnimatorController)
+            {
+                local.avatar = model.avatar;
+                local.runtimeAnimatorController = model.runtimeAnimatorController;
+            }
         }
     }
 }

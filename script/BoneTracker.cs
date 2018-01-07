@@ -3,21 +3,24 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-[Serializable]
-public class BoneTracker
+namespace ModelSwap
 {
-    [SerializeField]
-    private List<TransformMatcher> _bones;
-
-    public BoneTracker(SkinnedMeshRenderer skinnedMeshRenderer)
+    [Serializable]
+    public class BoneTracker
     {
-        Transform root = skinnedMeshRenderer.rootBone;
-        _bones = skinnedMeshRenderer.bones.Select(b => new TransformMatcher(root, b)).ToList();
-    }
+        [SerializeField]
+        private List<TransformMatcher> _bones;
 
-    internal Transform[] Match(SkinnedMeshRenderer skinnedMeshRenderer)
-    {
-        Transform root = skinnedMeshRenderer.rootBone;
-        return _bones.Select(b => b.FindMatch(root)).ToArray();
+        public BoneTracker(SkinnedMeshRenderer skinnedMeshRenderer)
+        {
+            Transform root = skinnedMeshRenderer.rootBone;
+            _bones = skinnedMeshRenderer.bones.Select(b => new TransformMatcher(root, b)).ToList();
+        }
+
+        internal Transform[] Match(SkinnedMeshRenderer skinnedMeshRenderer)
+        {
+            Transform root = skinnedMeshRenderer.rootBone;
+            return _bones.Select(b => b.FindMatch(root)).ToArray();
+        }
     }
 }

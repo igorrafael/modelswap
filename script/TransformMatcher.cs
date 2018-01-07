@@ -1,32 +1,34 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-[Serializable]
-public class TransformMatcher
+namespace ModelSwap
 {
-    [SerializeField]
-    private List<string> _path = new List<string>();
-
-    public TransformMatcher(Transform rootBone, Transform bone)
+    [Serializable]
+    public class TransformMatcher
     {
-        while (rootBone != bone)
+        [SerializeField]
+        private List<string> _path = new List<string>();
+
+        public TransformMatcher(Transform rootBone, Transform bone)
         {
-            if (bone == null)
+            while (rootBone != bone)
             {
-                throw new Exception();
+                if (bone == null)
+                {
+                    throw new Exception();
+                }
+
+                _path.Add(bone.name);
+                bone = bone.parent;
             }
-
-            _path.Add(bone.name);
-            bone = bone.parent;
+            _path.Reverse();
         }
-        _path.Reverse();
-    }
 
-    internal Transform FindMatch(Transform root)
-    {
-        return _path.Aggregate(root, (a, b) => a.Find(b));
+        internal Transform FindMatch(Transform root)
+        {
+            return _path.Aggregate(root, (a, b) => a.Find(b));
+        }
     }
 }
