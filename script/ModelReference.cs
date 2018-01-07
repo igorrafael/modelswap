@@ -25,7 +25,7 @@ namespace ModelSwap
         }
 
         [Serializable]
-        private struct AnimatorOverride
+        public class AnimatorOverride
         {
             public Animator animator;
             public RuntimeAnimatorController controllerOverride;
@@ -37,7 +37,7 @@ namespace ModelSwap
         private BoneSet[] _bones = new BoneSet[0];
 
         [SerializeField]
-        private AnimatorOverride[] _animators = new AnimatorOverride[0];
+        public AnimatorOverride[] _animators = new AnimatorOverride[0];
 
 
         public Transform Model
@@ -51,6 +51,11 @@ namespace ModelSwap
         public ModelReference(Transform local, Transform model, bool bakeBones = true)
         {
             _model = model;
+            Update(local, model, bakeBones);
+        }
+
+        public void Update(Transform local, Transform model, bool bakeBones)
+        {
             if (bakeBones)
             {
                 _bones = (
@@ -66,10 +71,11 @@ namespace ModelSwap
 
             _animators = (
                 from animator in model.GetComponentsInChildren<Animator>()
-                select new AnimatorOverride
-                    {
-                        animator = animator
-                    }
+                let current = _animators.FirstOrDefault(a=>a.animator==animator)
+                select current ?? new AnimatorOverride
+                {
+                    animator = animator,
+                }
                 ).ToArray();
         }
 

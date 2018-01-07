@@ -17,10 +17,15 @@ namespace ModelSwap
             _modelReference = models.Where(m => m != null).Select(GetReferenceOrNew).ToArray();
         }
 
-        private ModelReference GetReferenceOrNew(Transform model)
+        public ModelReference GetReferenceOrNew(Transform model)
         {
             ModelReference reference = _modelReference.FirstOrDefault(m => m.Model == model);
-            return reference ?? new ModelReference(transform, model, _bakeBones);
+            if (reference != null)
+            {
+                reference.Update(transform, model, _bakeBones);
+                return reference;
+            }
+            return new ModelReference(transform, model, _bakeBones);
         }
 
         public bool Swap(Transform model)
