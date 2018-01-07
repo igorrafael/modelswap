@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+[Serializable]
 public class BoneTracker
 {
-    private class TrackedBone
+    [Serializable]
+    public class TrackedBone
     {
-        readonly List<string> _path = new List<string>();
+        [SerializeField]
+        private List<string> _path = new List<string>();
 
         public TrackedBone(Transform rootBone, Transform bone)
         {
@@ -30,15 +33,20 @@ public class BoneTracker
         }
     }
 
-    private List<TrackedBone> bones;
+    [SerializeField]
+    private SkinnedMeshRenderer _skinnedMeshRenderer;
+    [SerializeField]
+    private List<TrackedBone> _bones;
 
-    public BoneTracker(SkinnedMeshRenderer smr)
+    public BoneTracker(SkinnedMeshRenderer skinnedMeshRenderer)
     {
-        bones = smr.bones.Select(b => new TrackedBone(smr.rootBone, b)).ToList();
+        _skinnedMeshRenderer = skinnedMeshRenderer;
+        Transform root = skinnedMeshRenderer.rootBone;
+        _bones = skinnedMeshRenderer.bones.Select(b => new TrackedBone(root, b)).ToList();
     }
 
     internal Transform[] Match(Transform root)
     {
-        return bones.Select(b => b.FindMatch(root)).ToArray();
+        return _bones.Select(b => b.FindMatch(root)).ToArray();
     }
 }

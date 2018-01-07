@@ -1,59 +1,85 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Assertions;
 
 public class ModelSwapper : MonoBehaviour
 {
     public Transform[] models = new Transform[0];
+    [SerializeField]
+    private ModelReference[] _models = new ModelReference[0];
     public Transform currentModel;
 
-    /*
     [Serializable]
     private class ModelReference
     {
         [Serializable]
-        public class BoneSet
+        private class BoneSet
         {
-            private SkinnedMeshRenderer _skin;
+            [SerializeField]
+            private SkinnedMeshRenderer _smr;
+            [SerializeField]
             private Transform[] _bones;
 
-            public BoneSet(SkinnedMeshRenderer smr)
+            public BoneSet(SkinnedMeshRenderer smr, Transform[] bones)
             {
-                _skin = smr;
-            }
-
-            internal void OnValidate(Transform boneRoot)
-            {
-            }
-
-            public void Apply()
-            {
-                _skin.bones = _bones;
+                _smr = smr;
+                _bones = bones;
+                if (_bones.Length != smr.bones.Length)
+                {
+                    throw new ArgumentException();
+                }
             }
         }
 
-        public Transform model;
-        public BoneSet[] bones;
+        [SerializeField]
+        private Transform _model;
+        [SerializeField]
+        private RuntimeAnimatorController _controller;
+        [SerializeField]
+        private Avatar avatar;
+        [SerializeField]
+        private BoneSet[] _bones;
 
-        public void OnValidate(ModelSwapper transform)
+        public ModelReference(Transform local, Transform model)
         {
-            bones = model.GetComponentsInChildren<SkinnedMeshRenderer>().Select(s => new BoneSet(s)).ToArray();
+            _model = model;
 
-            foreach (BoneSet set in bones)
+            _bones = (
+                from modelSmr in model.GetComponentsInChildren<SkinnedMeshRenderer>()
+                let tracker = new BoneTracker(modelSmr)
+                let localTransform = FindMatch(local, model, modelSmr.transform)
+                where localTransform
+                let localSmr = localTransform.GetComponent<SkinnedMeshRenderer>()
+                where localSmr
+                select new BoneSet(modelSmr, tracker.Match(localSmr.rootBone))
+                ).ToArray();
+        }
+
+        public Transform FindMatch(Transform searchRoot, Transform referenceRoot, Transform referenceTarget)
+        {
+            try
             {
+                var tracker = new BoneTracker.TrackedBone(referenceRoot, referenceTarget);
+                return tracker.FindMatch(searchRoot);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e);
+                return null;
             }
         }
     }
-    */
+
+    public void OnValidate()
+    {
+        _models = models.Where(m => m != null).Select(m => new ModelReference(transform, m)).ToArray();
+    }
 
     public void Swap(Transform model)
     {
-        currentModel = model;
-
         Match(transform, model.transform);
+        currentModel = model;
     }
 
     private void Match(Transform local, Transform model)
@@ -96,7 +122,8 @@ public class ModelSwapper : MonoBehaviour
 
         foreach (Transform unvisited in childDictionary.Values)
         {
-            unvisited.gameObject.SetActive(false);
+            //IDEA: check if this was in the _currentModel
+            //unvisited.gameObject.SetActive(false);
         }
     }
 
