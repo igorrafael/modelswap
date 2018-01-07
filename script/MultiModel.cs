@@ -12,10 +12,12 @@ namespace ModelSwap
         private ModelReference[] _models = new ModelReference[0];
         public Transform currentModel;
         private ModelReference _currentReference;
+        [SerializeField]
+        private bool _bakeBones;
 
         public void OnValidate()
         {
-            _models = models.Where(m => m != null).Select(m => new ModelReference(transform, m)).ToArray();
+            _models = models.Where(m => m != null).Select(m => new ModelReference(transform, m, _bakeBones)).ToArray();
         }
 
         public void Swap(Transform model)

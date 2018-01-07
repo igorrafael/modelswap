@@ -8,11 +8,11 @@ namespace ModelSwap
     public class ModelReference
     {
         [Serializable]
-        private class BoneSet
+        private struct BoneSet
         {
             public SkinnedMeshRenderer skinnedMeshRenderer;
             public Transform[] bones;
-
+            
             public BoneSet(SkinnedMeshRenderer smr, Transform[] bones)
             {
                 skinnedMeshRenderer = smr;
@@ -27,11 +27,7 @@ namespace ModelSwap
         [SerializeField]
         private Transform _model;
         [SerializeField]
-        private RuntimeAnimatorController _controller;
-        [SerializeField]
-        private Avatar avatar;
-        [SerializeField]
-        private BoneSet[] _bones;
+        private BoneSet[] _bones = new BoneSet[0];
 
         public Transform Model
         {
@@ -41,19 +37,21 @@ namespace ModelSwap
             }
         }
 
-        public ModelReference(Transform local, Transform model)
+        public ModelReference(Transform local, Transform model, bool bakeBones = true)
         {
             _model = model;
-
-            _bones = (
-                from modelSmr in model.GetComponentsInChildren<SkinnedMeshRenderer>()
-                let tracker = new BoneTracker(modelSmr)
-                let localTransform = FindMatch(local, model, modelSmr.transform)
-                where localTransform
-                let localSmr = localTransform.GetComponent<SkinnedMeshRenderer>()
-                where localSmr
-                select new BoneSet(modelSmr, tracker.Match(localSmr))
-                ).ToArray();
+            if (bakeBones)
+            {
+                _bones = (
+                    from modelSmr in model.GetComponentsInChildren<SkinnedMeshRenderer>()
+                    let tracker = new BoneTracker(modelSmr)
+                    let localTransform = FindMatch(local, model, modelSmr.transform)
+                    where localTransform
+                    let localSmr = localTransform.GetComponent<SkinnedMeshRenderer>()
+                    where localSmr
+                    select new BoneSet(modelSmr, tracker.Match(localSmr))
+                    ).ToArray();
+            }
         }
 
         public Transform FindMatch(Transform searchRoot, Transform referenceRoot, Transform referenceTarget)
@@ -72,7 +70,8 @@ namespace ModelSwap
 
         internal Transform[] GetBones(SkinnedMeshRenderer local, SkinnedMeshRenderer model)
         {
-            return _bones.FirstOrDefault(b => b.skinnedMeshRenderer == model).bones;
+            BoneSet boneSet = _bones.FirstOrDefault(b => b.skinnedMeshRenderer == model);
+            return boneSet.bones ?? new BoneTracker(model).Match(local);
         }
     }
 }
