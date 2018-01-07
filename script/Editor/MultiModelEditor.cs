@@ -3,8 +3,8 @@ using UnityEditor;
 using UnityEngine;
 
 [CanEditMultipleObjects]
-[CustomEditor(typeof(ModelSwapper))]
-public class ModelSwapperEditor : Editor
+[CustomEditor(typeof(MultiModel))]
+public class MultiModelEditor : Editor
 {
     private SerializedProperty _models;
 
@@ -16,7 +16,7 @@ public class ModelSwapperEditor : Editor
     {
         _models = serializedObject.FindProperty("models");
 
-        var tgts = targets.Cast<ModelSwapper>().ToArray();
+        var tgts = targets.Cast<MultiModel>().ToArray();
         var distinctModels = tgts.SelectMany(t => t.models.Distinct()).GroupBy(t => t);
 
         foreach (var group in distinctModels)
