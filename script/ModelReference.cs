@@ -12,7 +12,7 @@ namespace ModelSwap
         {
             public SkinnedMeshRenderer skinnedMeshRenderer;
             public Transform[] bones;
-            
+
             public BoneSet(SkinnedMeshRenderer smr, Transform[] bones)
             {
                 skinnedMeshRenderer = smr;
@@ -24,10 +24,21 @@ namespace ModelSwap
             }
         }
 
+        [Serializable]
+        private struct AnimatorOverride
+        {
+            public Animator animator;
+            public RuntimeAnimatorController controllerOverride;
+        }
+
         [SerializeField]
         private Transform _model;
         [SerializeField]
         private BoneSet[] _bones = new BoneSet[0];
+
+        [SerializeField]
+        private AnimatorOverride[] _animators = new AnimatorOverride[0];
+
 
         public Transform Model
         {
@@ -52,6 +63,14 @@ namespace ModelSwap
                     select new BoneSet(modelSmr, tracker.Match(localSmr))
                     ).ToArray();
             }
+
+            _animators = (
+                from animator in model.GetComponentsInChildren<Animator>()
+                select new AnimatorOverride
+                    {
+                        animator = animator
+                    }
+                ).ToArray();
         }
 
         public Transform FindMatch(Transform searchRoot, Transform referenceRoot, Transform referenceTarget)
@@ -72,6 +91,12 @@ namespace ModelSwap
         {
             BoneSet boneSet = _bones.FirstOrDefault(b => b.skinnedMeshRenderer == model);
             return boneSet.bones ?? new BoneTracker(model).Match(local);
+        }
+
+        internal RuntimeAnimatorController GetController(Animator local)
+        {
+            AnimatorOverride animatorOverride = _animators.FirstOrDefault(o => o.animator == local);
+            return animatorOverride.controllerOverride;
         }
     }
 }
