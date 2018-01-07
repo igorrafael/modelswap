@@ -1,0 +1,10 @@
+{
+    "name": "ModelSwapEditor",
+    "references": [
+        "ModelSwap"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}
