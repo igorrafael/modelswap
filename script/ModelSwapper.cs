@@ -9,6 +9,7 @@ public class ModelSwapper : MonoBehaviour
     [SerializeField]
     private ModelReference[] _models = new ModelReference[0];
     public Transform currentModel;
+    private ModelReference _currentReference;
 
     [Serializable]
     private class ModelReference
@@ -16,16 +17,14 @@ public class ModelSwapper : MonoBehaviour
         [Serializable]
         private class BoneSet
         {
-            [SerializeField]
-            private SkinnedMeshRenderer _smr;
-            [SerializeField]
-            private Transform[] _bones;
+            public SkinnedMeshRenderer skinnedMeshRenderer;
+            public Transform[] bones;
 
             public BoneSet(SkinnedMeshRenderer smr, Transform[] bones)
             {
-                _smr = smr;
-                _bones = bones;
-                if (_bones.Length != smr.bones.Length)
+                skinnedMeshRenderer = smr;
+                this.bones = bones;
+                if (this.bones.Length != smr.bones.Length)
                 {
                     throw new ArgumentException();
                 }
@@ -40,6 +39,14 @@ public class ModelSwapper : MonoBehaviour
         private Avatar avatar;
         [SerializeField]
         private BoneSet[] _bones;
+
+        public Transform Model
+        {
+            get
+            {
+                return _model;
+            }
+        }
 
         public ModelReference(Transform local, Transform model)
         {
@@ -60,7 +67,7 @@ public class ModelSwapper : MonoBehaviour
         {
             try
             {
-                var tracker = new BoneTracker.TrackedBone(referenceRoot, referenceTarget);
+                var tracker = new TransformMatcher(referenceRoot, referenceTarget);
                 return tracker.FindMatch(searchRoot);
             }
             catch (Exception e)
@@ -68,6 +75,11 @@ public class ModelSwapper : MonoBehaviour
                 Debug.LogError(e);
                 return null;
             }
+        }
+
+        internal Transform[] GetBones(SkinnedMeshRenderer local, SkinnedMeshRenderer model)
+        {
+            return _bones.FirstOrDefault(b => b.skinnedMeshRenderer == model).bones;
         }
     }
 
@@ -78,7 +90,8 @@ public class ModelSwapper : MonoBehaviour
 
     public void Swap(Transform model)
     {
-        Match(transform, model.transform);
+        _currentReference = _models.FirstOrDefault(m => m.Model == model);
+        Match(transform, model);
         currentModel = model;
     }
 
@@ -123,7 +136,10 @@ public class ModelSwapper : MonoBehaviour
         foreach (Transform unvisited in childDictionary.Values)
         {
             //IDEA: check if this was in the _currentModel
-            //unvisited.gameObject.SetActive(false);
+            if (unvisited.GetComponent<SkinnedMeshRenderer>() != null)
+            {
+                unvisited.gameObject.SetActive(false);
+            }
         }
     }
 
@@ -167,7 +183,7 @@ public class ModelSwapper : MonoBehaviour
         local.sharedMesh = model.sharedMesh;
         local.sharedMaterials = model.sharedMaterials;
 
-        local.bones = new BoneTracker(model).Match(local.rootBone);
+        local.bones = _currentReference.GetBones(local, model);
     }
 
     private void MatchComponent(MeshRenderer local, MeshRenderer model)
