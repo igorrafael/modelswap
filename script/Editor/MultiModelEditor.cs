@@ -1,6 +1,8 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace ModelSwap
 {
@@ -23,20 +25,46 @@ namespace ModelSwap
 
             foreach (var group in distinctModels)
             {
-                var model = group.Key;
-                if (GUILayout.Button("Activate " + model.name + " (" + group.Count() + ")"))
+                EditorGUILayout.BeginVertical("Box");
                 {
-                    foreach (var tgt in tgts.Where(t => t.models.Contains(model)))
+                    var model = group.Key;
+                    if (GUILayout.Button("Activate " + model.name + " (" + group.Count() + ")"))
                     {
-                        tgt.Swap(model);
+                        foreach (var tgt in tgts.Where(t => t.models.Contains(model)))
+                        {
+                            tgt.Swap(model);
+                        }
+                    }
+
+                    var s =
+                        from t in tgts
+                        let r = t.GetReferenceOrNew(model)
+                        from a in r._animators
+                        select new { t, r, a};
+                    foreach (var b in s)
+                    {
+                        EditorGUILayout.BeginHorizontal();
+                        {
+                            var a = b.a.animator;
+                            ObjectField(ref a);
+                            ObjectField(ref b.a.controllerOverride);
+                        }
+                        EditorGUILayout.EndHorizontal();
                     }
                 }
+                EditorGUILayout.EndVertical();
             }
 
             serializedObject.Update();
             _models.isExpanded = true;
             EditorGUILayout.PropertyField(_models, true);
             serializedObject.ApplyModifiedProperties();
+        }
+
+        private static void ObjectField<T>(ref T obj)
+            where T : Object
+        {
+            obj = EditorGUILayout.ObjectField(obj, typeof(T), false) as T;
         }
     }
 }
