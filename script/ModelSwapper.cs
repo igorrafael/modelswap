@@ -47,8 +47,20 @@ public class ModelSwapper
 
         foreach (Transform modelChild in model)
         {
-            Transform localChild = childDictionary[modelChild.name];
-            childDictionary.Remove(modelChild.name);
+            Transform localChild;
+            string name = modelChild.name;
+            if (childDictionary.ContainsKey(name))
+            {
+                localChild = childDictionary[name];
+            }
+            else
+            {
+                //TODO treat this better
+                localChild = new GameObject(name).transform;
+                localChild.SetParent(local);
+            }
+
+            childDictionary.Remove(name);
 
             localChild.localPosition = modelChild.localPosition;
             localChild.localRotation = modelChild.localRotation;
