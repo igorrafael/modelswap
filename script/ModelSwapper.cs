@@ -154,7 +154,7 @@ namespace ModelSwap
             if (model.runtimeAnimatorController)
             {
                 //TODO: check uses of this
-                //WARNING: can runtime changing is not fully supported by unity (according to API)
+                //WARNING: runtime changing is not fully supported by unity (according to API)
                 //local.avatar = model.avatar;
 
                 local.runtimeAnimatorController = _reference.GetController(local) ?? model.runtimeAnimatorController;
