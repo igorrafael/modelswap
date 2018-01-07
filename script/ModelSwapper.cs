@@ -14,9 +14,16 @@ public class ModelSwapper
 
     public void Match(Transform local, Transform model)
     {
+        Component[] components = model.GetComponents<Component>();
+
+        if (components.Any(c => c is MultiModel))
+        {
+            return;
+        }
+
         local.gameObject.SetActive(model.gameObject.activeSelf);
 
-        foreach (Component modelComponent in model.GetComponents<Component>())
+        foreach (Component modelComponent in components)
         {
             if (modelComponent is Transform)
             {
