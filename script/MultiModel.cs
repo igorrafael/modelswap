@@ -17,6 +17,14 @@ namespace ModelSwap
             _modelReference = models.Where(m => m != null).Select(GetReferenceOrNew).ToArray();
         }
 
+        public ModelReference this[Transform model]
+        {
+            get
+            {
+                return GetReferenceOrNew(model);
+            }
+        }
+
         public ModelReference GetReferenceOrNew(Transform model)
         {
             ModelReference reference = _modelReference.FirstOrDefault(m => m.Model == model);
@@ -37,7 +45,7 @@ namespace ModelSwap
             }
 
             ModelSwapper swapper = new ModelSwapper(reference);
-            swapper.Match(transform, model);
+            swapper.Match(transform);
             currentModel = model;
 
             return true;
