@@ -207,13 +207,14 @@ namespace ModelSwap
                 return;
             }
 
-            if (model.runtimeAnimatorController)
+            var controller = _reference.GetController(model) ?? model.runtimeAnimatorController;
+            if (controller)
             {
                 //TODO: check uses of this
                 //WARNING: runtime changing is not fully supported by unity (according to API)
                 //local.avatar = model.avatar;
 
-                local.runtimeAnimatorController = _reference.GetController(local) ?? model.runtimeAnimatorController;
+                local.runtimeAnimatorController = controller;
             }
         }
     }
