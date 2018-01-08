@@ -2,11 +2,35 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace ModelSwap
 {
     public class ModelSwapper
     {
+        public class LogEntry : List<LogEntry>
+        {
+            public static int lastId = 0;
+
+            readonly public int id;
+            readonly public string message;
+            readonly public Object local, model;
+
+            public LogEntry(string msg, Object from, Object to)
+            {
+                this.message = msg;
+                this.local = from;
+                this.model = to;
+                this.id = lastId++;
+            }
+
+            public override int GetHashCode()
+            {
+                return id;
+            }
+        }
+
+        public bool dryRun;
         private readonly ModelReference _reference;
 
         public ModelSwapper(ModelReference reference)
@@ -14,16 +38,32 @@ namespace ModelSwap
             _reference = reference;
         }
 
-        public void Match(Transform local, Transform model)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="local"></param>
+        /// <param name="dryRun">Only write a log of changes</param>
+        public LogEntry Match(Transform local)
+        {
+            LogEntry.lastId = 0;
+            return Match(local, _reference.Model);
+        }
+
+        private LogEntry Match(Transform local, Transform model)
         {
             Component[] components = model.GetComponents<Component>();
 
             if (components.Any(c => c is MultiModel))
             {
-                return;
+                return new LogEntry("Nested multimodel", local, model);
             }
 
-            local.gameObject.SetActive(model.gameObject.activeSelf);
+            LogEntry log = new LogEntry("Transforms", local, model);
+
+            if (!dryRun)
+            {
+                local.gameObject.SetActive(model.gameObject.activeSelf);
+            }
 
             foreach (Component modelComponent in components)
             {
@@ -33,7 +73,11 @@ namespace ModelSwap
                 }
 
                 Type type = modelComponent.GetType();
-                Component localComponent = local.GetComponent(type) ?? local.gameObject.AddComponent(type);
+                Component localComponent = local.GetComponent(type);
+                if (!dryRun && localComponent == null)
+                {
+                    local.gameObject.AddComponent(type);
+                }
 
 #if UNITY_EDITOR
                 if (local.GetComponents(type).Length > 1)
@@ -41,8 +85,7 @@ namespace ModelSwap
                     throw new Exception();
                 }
 #endif
-
-                Match(localComponent, modelComponent);
+                log.Add(Match(localComponent, modelComponent));
             }
 
             Dictionary<string, Transform> childDictionary = CreateChildDictionary(local);
@@ -51,34 +94,43 @@ namespace ModelSwap
             {
                 Transform localChild;
                 string name = modelChild.name;
+                bool missingChild = false;
                 if (childDictionary.ContainsKey(name))
                 {
                     localChild = childDictionary[name];
+                    childDictionary.Remove(name);
                 }
                 else
                 {
-                    //TODO treat this better
+                    missingChild = true;
                     localChild = new GameObject(name).transform;
                     localChild.SetParent(local);
                 }
 
-                childDictionary.Remove(name);
 
                 localChild.localPosition = modelChild.localPosition;
                 localChild.localRotation = modelChild.localRotation;
                 localChild.localScale = modelChild.localScale;
 
-                Match(localChild, modelChild);
+                log.Add(Match(localChild, modelChild));
+
+                if (missingChild && dryRun)
+                {
+                    Object.DestroyImmediate(localChild.gameObject);
+                }
             }
 
             foreach (Transform unvisited in childDictionary.Values)
             {
                 //IDEA: check if this was in the _currentModel
-                if (unvisited.GetComponent<SkinnedMeshRenderer>() != null)
+                if (!dryRun && unvisited.GetComponent<SkinnedMeshRenderer>() != null)
                 {
                     unvisited.gameObject.SetActive(false);
                 }
+                log.Add(new LogEntry("unvisited", unvisited, null));
             }
+
+            return log;
         }
 
         //IDEA: bake this dictionary for runtime use
@@ -95,20 +147,24 @@ namespace ModelSwap
             return model.Cast<Transform>().ToDictionary(c => c.name);
         }
 
-        private void Match(Component localComponent, Component modelComponent)
+        private LogEntry Match(Component localComponent, Component modelComponent)
         {
-            SkinnedMeshRenderer skinned = modelComponent as SkinnedMeshRenderer;
-            if (skinned)
+            if (!dryRun)
             {
-                MatchComponent(localComponent as SkinnedMeshRenderer, skinned);
-            }
-            else
-            {
-                MatchComponent(localComponent as MeshRenderer, modelComponent as MeshRenderer);
-                MatchComponent(localComponent as MeshFilter, modelComponent as MeshFilter);
-            }
+                SkinnedMeshRenderer skinned = modelComponent as SkinnedMeshRenderer;
+                if (skinned)
+                {
+                    MatchComponent(localComponent as SkinnedMeshRenderer, skinned);
+                }
+                else
+                {
+                    MatchComponent(localComponent as MeshRenderer, modelComponent as MeshRenderer);
+                    MatchComponent(localComponent as MeshFilter, modelComponent as MeshFilter);
+                }
 
-            MatchComponent(localComponent as Animator, modelComponent as Animator);
+                MatchComponent(localComponent as Animator, modelComponent as Animator);
+            }
+            return new LogEntry("Component", localComponent, modelComponent);
         }
 
         private void MatchComponent(SkinnedMeshRenderer local, SkinnedMeshRenderer model)
