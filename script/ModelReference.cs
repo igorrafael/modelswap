@@ -102,6 +102,10 @@ namespace ModelSwap
         internal RuntimeAnimatorController GetController(Animator local)
         {
             AnimatorOverride animatorOverride = _animators.FirstOrDefault(o => o.animator == local);
+            if (animatorOverride == null)
+            {
+                return null;
+            }
             return animatorOverride.controllerOverride;
         }
     }
