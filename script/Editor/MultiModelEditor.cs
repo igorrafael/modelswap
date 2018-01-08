@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ModelSwap.EditorShortcut;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -30,7 +31,7 @@ namespace ModelSwap
 
             foreach (var group in distinctModels)
             {
-                EditorGUILayout.BeginVertical("Box");
+                using (new Vertical("Box"))
                 {
                     var model = group.Key;
 
@@ -51,20 +52,17 @@ namespace ModelSwap
                         select new { t, r, a };
                     foreach (var b in s)
                     {
-                        EditorGUILayout.BeginHorizontal();
+                        using (new Horizontal())
                         {
                             var a = b.a.animator;
-                            ObjectField(ref a);
-                            ObjectField(ref b.a.controllerOverride);
+                            Field.Object(ref a);
+                            Field.Object(ref b.a.controllerOverride);
                         }
-                        EditorGUILayout.EndHorizontal();
                     }
                 }
-                EditorGUILayout.EndVertical();
             }
 
             serializedObject.Update();
-            _models.isExpanded = true;
             EditorGUILayout.PropertyField(_models, true);
             serializedObject.ApplyModifiedProperties();
         }
@@ -82,14 +80,13 @@ namespace ModelSwap
 
                 foreach (var tgt in tgts)
                 {
-                    EditorGUILayout.BeginVertical("Box");
+                    using (new Vertical("Box"))
                     {
                         ModelSwapper swapper = new ModelSwapper(tgt[model]);
                         swapper.dryRun = true;
                         _indent = 0;
                         swapper.Match(tgt.transform).ForEach(LogEntryGUI);
                     }
-                    EditorGUILayout.EndVertical();
                 }
             }
         }
@@ -97,12 +94,6 @@ namespace ModelSwap
         private void LogEntryGUI(ModelSwapper.LogEntry entry)
         {
             var key = entry.id;
-            /*
-            var key = entry.local as Transform
-                ?? entry.model as Transform
-                ?? (entry.local as Component).transform
-                ?? (entry.model as Component).transform;
-                */
 
             var foldout = _logFoldout;
             if (!foldout.ContainsKey(key))
@@ -110,14 +101,15 @@ namespace ModelSwap
                 foldout[key] = true;
             }
 
-            EditorGUILayout.BeginHorizontal();
+            using (new Horizontal())
             {
                 GUILayout.Space(6 * _indent);
+
+                //TODO fix object field preventing foldout click
                 foldout[key] = EditorGUILayout.Foldout(entry.Count == 0 || foldout[key], GUIContent.none);
-                ObjectField(entry.local);
-                ObjectField(entry.model);
+                Field.Object(entry.local);
+                Field.Object(entry.model);
             }
-            EditorGUILayout.EndHorizontal();
 
             if (foldout[key])
             {
@@ -127,16 +119,5 @@ namespace ModelSwap
             }
         }
 
-        private static void ObjectField(Object obj)
-        {
-            Type objType = obj == null ? typeof(Object) : obj.GetType();
-            EditorGUILayout.ObjectField(obj, objType, false);
-        }
-
-        private static void ObjectField<T>(ref T obj)
-            where T : Object
-        {
-            obj = EditorGUILayout.ObjectField(obj, typeof(T), false) as T;
-        }
     }
 }
