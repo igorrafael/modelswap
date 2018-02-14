@@ -5,7 +5,7 @@ This can be used "apply" different prefabs to a GameObject without aftecting par
 
 The biggest advantage is when this is used with an external model (e.g.: fbx) that can be re-applied without losing local modifications.
 
-Features:
+Proposed features:
 - Editor and Runtime support
 - Preview in inspector view
 - Multi-object editing support
